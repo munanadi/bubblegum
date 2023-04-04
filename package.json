@@ -1,22 +1,41 @@
 {
-  "name": "web3social",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "@types/node": "18.15.11",
-    "@types/react": "18.0.33",
-    "@types/react-dom": "18.0.11",
-    "eslint": "8.37.0",
-    "eslint-config-next": "13.2.4",
-    "next": "13.2.4",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "typescript": "5.0.3"
-  }
+    "name": "web3social",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "next lint",
+        "prepare": "husky install"
+    },
+    "dependencies": {
+        "@chakra-ui/react": "^2.5.5",
+        "@emotion/react": "^11.10.6",
+        "@emotion/styled": "^11.10.6",
+        "@solana/wallet-adapter-base": "^0.9.22",
+        "@solana/wallet-adapter-react": "^0.15.32",
+        "@solana/wallet-adapter-react-ui": "^0.9.31",
+        "@solana/wallet-adapter-wallets": "^0.19.16",
+        "@solana/web3.js": "^1.75.0",
+        "@types/node": "18.15.11",
+        "@types/react": "18.0.33",
+        "@types/react-dom": "18.0.11",
+        "eslint": "8.37.0",
+        "eslint-config-next": "13.2.4",
+        "framer-motion": "^10.10.0",
+        "next": "13.2.4",
+        "react": "18.2.0",
+        "react-dom": "18.2.0",
+        "typescript": "5.0.3"
+    },
+    "devDependencies": {
+        "@commitlint/cli": "^17.5.1",
+        "@commitlint/config-conventional": "^17.4.4",
+        "eslint-config-prettier": "^8.8.0",
+        "eslint-plugin-prettier": "^4.2.1",
+        "husky": "^8.0.0",
+        "lint-staged": "^13.2.0",
+        "prettier": "^2.8.7"
+    }
 }
