@@ -3,6 +3,8 @@ import { Box, Flex, Grid, GridItem, Heading } from "@chakra-ui/react";
 import NavBar from "../NavBar";
 import SideBar from "../SideBar";
 import { ErrorBoundary } from "react-error-boundary";
+import Footer from "../Footer";
+import RightSideBar from "../RightSidebar";
 
 function Layout() {
     return (
@@ -27,7 +29,7 @@ function Layout() {
                     <Box>main</Box>
                 </GridItem>
                 <GridItem area="rightSide">
-                    <Box>Right Side</Box>
+                    <RightSideBar />
                 </GridItem>
                 <GridItem
                     justifySelf={"flex-end"}
@@ -35,7 +37,7 @@ function Layout() {
                     position="fixed"
                     bottom={0}
                 >
-                    <Box>Footer</Box>
+                    <Footer />
                 </GridItem>
             </Grid>
         </ErrorBoundary>

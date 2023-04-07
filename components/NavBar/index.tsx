@@ -27,12 +27,12 @@ export default function NavBar() {
     const { isOpen, onToggle } = useDisclosure();
 
     return (
-        <Box>
+        <Box h="full" borderBottom={"0.5px solid"} borderColor={"gray.500"}>
             <Flex
                 color={useColorModeValue("gray.600", "white")}
                 minH={"60px"}
                 py={{ base: 2 }}
-                px={{ base: 4 }}
+                px={{ base: 8 }}
                 align={"center"}
             >
                 <Flex
@@ -72,7 +72,6 @@ export default function NavBar() {
                         <DesktopNav />
                     </Flex> */}
                 </Flex>
-
                 <WalletMultiButton />
             </Flex>
 
