@@ -15,6 +15,7 @@ function SideBar() {
         <VStack
             pl={8}
             pr={6}
+            pt={8}
             align={"center"}
             color="whiteAlpha.900"
             spacing={4}

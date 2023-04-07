@@ -12,6 +12,7 @@
     "dependencies": {
         "@chakra-ui/icons": "^2.0.18",
         "@chakra-ui/react": "^2.5.5",
+        "@coral-xyz/anchor": "^0.27.0",
         "@emotion/react": "^11.10.6",
         "@emotion/styled": "^11.10.6",
         "@gumhq/react-sdk": "^2.0.1",
