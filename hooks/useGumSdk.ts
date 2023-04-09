@@ -1,17 +1,17 @@
 import { AnchorWallet, useAnchorWallet } from "@solana/wallet-adapter-react";
 import { useGum } from "@gumhq/react-sdk";
-import { Cluster, ConfirmOptions, Connection } from "@solana/web3.js";
 import { GraphQLClient } from "graphql-request";
 import * as anchor from "@coral-xyz/anchor";
+import { MAINNET_CLUSTER, MAINNET_RPC } from "@/constants/endpoints";
 
 export const useGumSDK = (
-    connection: Connection = new anchor.web3.Connection(
-        "https://api.devnet.solana.com",
-        "processed"
+    connection: anchor.web3.Connection = new anchor.web3.Connection(
+        MAINNET_RPC,
+        "confirmed"
     ),
-    opts: ConfirmOptions = { preflightCommitment: "processed" },
-    cluster: Cluster = "devnet",
-    gqlEndpoint: string = "https://aware-earwig-49.hasura.app/v1/graphql"
+    opts: anchor.web3.ConfirmOptions = { preflightCommitment: "confirmed" },
+    cluster: anchor.web3.Cluster = MAINNET_CLUSTER,
+    gqlEndpoint: string = "https://light-pelican-32.hasura.app/v1/graphql"
 ) => {
     const anchorWallet = useAnchorWallet() as AnchorWallet;
     let gqlClient: GraphQLClient | undefined;
