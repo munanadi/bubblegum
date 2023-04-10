@@ -1,134 +1,152 @@
-import React from "react";
-import { useCreateUser, useGum, useCreateProfile } from "@gumhq/react-sdk";
+import React, { useEffect, useState } from "react";
+import { useCreateUser, useCreateProfile } from "@gumhq/react-sdk";
 import { useGumSDK } from "@/hooks/useGumSdk";
-import {
-    useAnchorWallet,
-    useConnection,
-    useWallet,
-} from "@solana/wallet-adapter-react";
-import { ShdwDrive } from "@shadow-drive/sdk";
+import { useConnection, useWallet } from "@solana/wallet-adapter-react";
+import { ShdwDrive, StorageAccountResponse } from "@shadow-drive/sdk";
 import * as anchor from "@coral-xyz/anchor";
 import randomBytes from "randombytes";
+import { SHADOW_DRIVE_ENDPOINT } from "@/constants/endpoints";
+import { getUser } from "@/helpers/fetchData";
 
 const { PublicKey } = anchor.web3;
 
 function Profile() {
-    const sdk = useGumSDK();
-
     const wallet = useWallet();
-    const anchorWallet = useAnchorWallet();
-
     const { connection } = useConnection();
 
+    const sdk = useGumSDK();
+    const { getOrCreate: getOrCreateUser, create: createUser } =
+        useCreateUser(sdk);
+    const { getOrCreate: getOrCreateProfile, create: createProfile } =
+        useCreateProfile(sdk);
+
+    const [drive, setDrive] = useState<ShdwDrive>();
+    const [storageAccount, setStorageAccount] =
+        useState<StorageAccountResponse>();
+    const [profileMetadata, setProfileMetadata] = useState<string | null>(null);
+
+    // Init Drive
+    useEffect(() => {
+        async function initDrive() {
+            // TODO: Need to have SHDW, Pre transaction convert SHD as required.
+            const drive = await new ShdwDrive(connection, wallet).init();
+            setDrive(drive);
+        }
+        initDrive();
+    }, [wallet?.connected]);
+
+    // Get Storage Accounts
+    useEffect(() => {
+        async function getAccounts() {
+            const accounts = await drive?.getStorageAccounts("v2");
+
+            if (!accounts) {
+                console.log("Storage not created");
+                return;
+            }
+
+            // Get the first account created
+            setStorageAccount(accounts[0]);
+        }
+        getAccounts();
+    }, [drive]);
+
+    // Check if profile_metadata is present
+    useEffect(() => {
+        async function checkForProfileMetaData() {
+            if (drive && storageAccount) {
+                const fileNames =
+                    (await drive.listObjects(storageAccount?.publicKey)) ?? [];
+                const metadataPresent =
+                    fileNames.keys.filter(
+                        (fileName: any) => fileName === "metadata.json"
+                    ).length > 0;
+
+                let url = "";
+                if (metadataPresent) {
+                    url =
+                        SHADOW_DRIVE_ENDPOINT +
+                        `${storageAccount.publicKey}/metadata.json`;
+                    url = new URL(url).toString();
+                    setProfileMetadata(url);
+                }
+            }
+        }
+        checkForProfileMetaData();
+    }, [storageAccount, drive]);
+
     const handleClick = async () => {
-        if (wallet?.publicKey && wallet) {
-            // TODO: Their indexer is only in the Devnet right now
-            // save the PDAs that is created.
-
-            // Create User
-            let gumKeys = {
-                userPDA: "J7KvdtXZMV2bNHLoHH3ZQ4d82gA3277vDuwUr2BmEgzQ",
-                shadowPDA: "2KMaSNZhEdW3dffPjuG25uEVBKyTkxafEZvTKgzTCwHM",
-            };
-
-            if (localStorage.getItem("gumKeys")) {
-                const lsKeys = localStorage.getItem("gumKeys")!;
-                const gum = JSON.parse(lsKeys);
-                const userPDA = new anchor.web3.PublicKey(gum.userPDA);
-
-                console.log(
-                    userPDA.toString(),
-                    "is the user that was created from this wallet"
-                );
-                // TODO: Add better checking if accounts are present, after mainnet indexer is done
-                // const userAccount = await sdk.program.account.user.fetch(
-                //     new PublicKey(userPDA)
-                // );
-                // console.log(userAccount);
-            } else {
-                const randomHash = randomBytes(32);
-                const instructionMethodBuilder = sdk.program.methods
-                    .createUser(randomHash)
-                    .accounts({
-                        authority: wallet?.publicKey,
-                    });
-                const pubKeys = await instructionMethodBuilder.pubkeys();
-                const userPDA = pubKeys.user as anchor.web3.PublicKey;
-
-                await instructionMethodBuilder.rpc();
-
-                console.log("User created", userPDA.toString());
-
-                gumKeys = {
-                    ...gumKeys,
-                    userPDA: userPDA.toString(),
-                };
-                localStorage.setItem("gum", JSON.stringify(gumKeys));
-            }
-
+        if (wallet?.publicKey && wallet && drive) {
+            // Get or Create User
+            // This doesnt work at the moment, cause mainnet indexers need updation
+            // let userPDA = await getOrCreateUser(wallet?.publicKey);
+            let userPDA;
             try {
-                if (localStorage.getItem("gumKeys")) {
-                    const g = JSON.parse(localStorage.getItem("gumKeys")!);
-                    gumKeys.shadowPDA = g.shadowPDA;
+                userPDA = await getUser(wallet?.publicKey);
+
+                if (!userPDA) {
+                    userPDA = await createUser(wallet?.publicKey);
                 }
-
-                //  Shadow Drive
-                // TODO: Need to have SHDW, Pre transaction convert SHD as required.
-                const drive = await new ShdwDrive(connection, wallet).init();
-
-                let acctPubKey;
-
-                if (!gumKeys.shadowPDA) {
-                    // Creating an account
-                    const newAcct = await drive.createStorageAccount(
-                        "firstBucket",
-                        "5MB",
-                        "v2"
-                    );
-                    console.log(newAcct, "is created for us");
-                    const accts = await drive.getStorageAccounts("v2");
-                    acctPubKey = accts[0].publicKey;
-                    console.log(
-                        acctPubKey.toString(),
-                        "is the buckets address"
-                    );
-
-                    gumKeys = {
-                        ...gumKeys,
-                        shadowPDA: acctPubKey.toString(),
-                    };
-                    localStorage.setItem("gumKeys", JSON.stringify(gumKeys));
-                }
-
-                acctPubKey = new anchor.web3.PublicKey(gumKeys.shadowPDA);
-                // const acct = await drive.getStorageAccount(acctPubKey);
-                // console.log(acct);
-
-                // profile metadata URI should have name, bio, username, avatar
-                const data = {
-                    name: "John doe",
-                    bio: "What's up there?",
-                    avatar: "",
-                    username: "jondoe",
-                };
-
-                // Construct the file to upload
-                let file = new File(
-                    [JSON.stringify(data)],
-                    "profile_metadata.json",
-                    {
-                        type: "application/json",
-                    }
+            } catch (err: any) {
+                throw new Error(
+                    `Error getting or creating user: ${err.message}`
                 );
-
-                const upload = await drive.uploadFile(acctPubKey, file);
-                console.log(upload);
-            } catch (e) {
-                console.log(e);
             }
 
-            // Create Profile
-            // const profile = await getOrCreateProfile();
+            console.log(`user present ${userPDA?.toString()}`);
+
+            // No storage account, Create one
+            if (!storageAccount) {
+                // Creating an account
+                // TODO: Need to strcuture data more properly
+                // Can store stuff under a gum bucket
+                const newAcct = await drive.createStorageAccount(
+                    "firstBucket",
+                    "5MB",
+                    "v2"
+                );
+                const storageAccounts = await drive.getStorageAccounts("v2");
+                // TODO: First storage account is picked. Maybe check for other accounts and pick with a certain name
+                setStorageAccount(storageAccounts[0]);
+            }
+
+            // Check for profile metadata file in storage
+            if (!profileMetadata) {
+                if (storageAccount) {
+                    // profile metadata URI should have name, bio, username, avatar
+                    // TODO: populate data from inputs
+                    const data = {
+                        name: "John doe",
+                        bio: "What's up there?",
+                        avatar: "", // TOOD: add minidenticons later as defaults
+                        username: "jondoe",
+                    };
+
+                    // Construct the file to upload
+                    let file = new File(
+                        [JSON.stringify(data)],
+                        "metadata.json",
+                        {
+                            type: "application/json",
+                        }
+                    );
+
+                    let upload;
+                    try {
+                        upload = await drive.uploadFile(
+                            storageAccount.publicKey,
+                            file
+                        );
+
+                        let url = new URL(
+                            upload.finalized_locations[0]
+                        ).toString();
+                        setProfileMetadata(url);
+                    } catch (e) {
+                        console.log("Upload failed", upload?.upload_errors);
+                    }
+                }
+            }
         }
     };
 
