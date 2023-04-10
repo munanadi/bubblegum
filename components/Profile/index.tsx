@@ -15,13 +15,13 @@ const { PublicKey } = anchor.web3;
 function Profile() {
     const sdk = useGumSDK();
 
-    const { wallet, publicKey } = useWallet();
+    const wallet = useWallet();
     const anchorWallet = useAnchorWallet();
 
     const { connection } = useConnection();
 
     const handleClick = async () => {
-        if (publicKey && wallet) {
+        if (wallet?.publicKey && wallet) {
             // TODO: Their indexer is only in the Devnet right now
             // save the PDAs that is created.
 
@@ -50,7 +50,7 @@ function Profile() {
                 const instructionMethodBuilder = sdk.program.methods
                     .createUser(randomHash)
                     .accounts({
-                        authority: publicKey,
+                        authority: wallet?.publicKey,
                     });
                 const pubKeys = await instructionMethodBuilder.pubkeys();
                 const userPDA = pubKeys.user as anchor.web3.PublicKey;
@@ -113,16 +113,16 @@ function Profile() {
                 };
 
                 // Construct the file to upload
-                let f = new File([JSON.stringify(data)], "data.txt", {
-                    type: "plain/text",
-                });
+                let file = new File(
+                    [JSON.stringify(data)],
+                    "profile_metadata.json",
+                    {
+                        type: "application/json",
+                    }
+                );
 
-                console.log("Works?");
-                const upload = await drive.uploadFile(acctPubKey, f);
+                const upload = await drive.uploadFile(acctPubKey, file);
                 console.log(upload);
-                console.log(upload.finalized_locations);
-                console.log(upload.message);
-                console.log(upload.upload_errors);
             } catch (e) {
                 console.log(e);
             }
@@ -134,7 +134,9 @@ function Profile() {
 
     return (
         <div>
-            {publicKey && <button onClick={handleClick}>Create Account</button>}
+            {wallet?.publicKey && (
+                <button onClick={handleClick}>Create Account</button>
+            )}
         </div>
     );
 }

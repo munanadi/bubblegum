@@ -19,7 +19,10 @@ function WalletWrapper({ children, endpoint }: WalletWrapperProps) {
     const wallets = [new PhantomWalletAdapter(), new BackpackWalletAdapter()];
 
     return (
-        <ConnectionProvider endpoint={endpoint}>
+        <ConnectionProvider
+            endpoint={endpoint}
+            config={{ commitment: "confirmed" }}
+        >
             <WalletProvider wallets={wallets}>
                 <WalletModalProvider>{children}</WalletModalProvider>
             </WalletProvider>
