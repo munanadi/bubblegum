@@ -6,7 +6,7 @@ import { ShdwDrive, StorageAccountResponse } from "@shadow-drive/sdk";
 import * as anchor from "@coral-xyz/anchor";
 import randomBytes from "randombytes";
 import { SHADOW_DRIVE_ENDPOINT } from "@/constants/endpoints";
-import { getUser } from "@/helpers/fetchData";
+import { getProfile, getUser } from "@/helpers/fetchData";
 
 const { PublicKey } = anchor.web3;
 
@@ -17,23 +17,35 @@ function Profile() {
     const sdk = useGumSDK();
     const { getOrCreate: getOrCreateUser, create: createUser } =
         useCreateUser(sdk);
-    const { getOrCreate: getOrCreateProfile, create: createProfile } =
-        useCreateProfile(sdk);
+    const {
+        getOrCreate: getOrCreateProfile,
+        create: createProfile,
+        createProfileIxMethodBuilder,
+    } = useCreateProfile(sdk);
 
     const [drive, setDrive] = useState<ShdwDrive>();
     const [storageAccount, setStorageAccount] =
         useState<StorageAccountResponse>();
-    const [profileMetadata, setProfileMetadata] = useState<string | null>(null);
+    const [profileMetadataUrl, setProfileMetadataUrl] = useState<string | null>(
+        null
+    );
+    const [dpUrl, setDpUrl] = useState<string | null>(null);
 
     // Init Drive
     useEffect(() => {
         async function initDrive() {
             // TODO: Need to have SHDW, Pre transaction convert SHD as required.
-            const drive = await new ShdwDrive(connection, wallet).init();
-            setDrive(drive);
+            try {
+                const drive = await new ShdwDrive(connection, wallet).init();
+                setDrive(drive);
+            } catch (e) {
+                console.log("handled");
+            }
         }
-        initDrive();
-    }, [wallet?.connected]);
+        if (wallet && connection) {
+            initDrive();
+        }
+    }, [wallet]);
 
     // Get Storage Accounts
     useEffect(() => {
@@ -48,7 +60,9 @@ function Profile() {
             // Get the first account created
             setStorageAccount(accounts[0]);
         }
-        getAccounts();
+        if (drive) {
+            getAccounts();
+        }
     }, [drive]);
 
     // Check if profile_metadata is present
@@ -68,11 +82,35 @@ function Profile() {
                         SHADOW_DRIVE_ENDPOINT +
                         `${storageAccount.publicKey}/metadata.json`;
                     url = new URL(url).toString();
-                    setProfileMetadata(url);
+                    setProfileMetadataUrl(url);
                 }
             }
         }
         checkForProfileMetaData();
+    }, [storageAccount, drive]);
+
+    // Check if profile_metadata is present
+    useEffect(() => {
+        async function checkForDp() {
+            if (drive && storageAccount) {
+                const fileNames =
+                    (await drive.listObjects(storageAccount?.publicKey)) ?? [];
+                const dpPresent =
+                    fileNames.keys.filter(
+                        (fileName: any) => fileName === "dp.png"
+                    ).length > 0;
+
+                let url = "";
+                if (dpPresent) {
+                    url =
+                        SHADOW_DRIVE_ENDPOINT +
+                        `${storageAccount.publicKey}/dp.png`;
+                    url = new URL(url).toString();
+                    setDpUrl(url);
+                }
+            }
+        }
+        checkForDp();
     }, [storageAccount, drive]);
 
     const handleClick = async () => {
@@ -91,6 +129,7 @@ function Profile() {
                 throw new Error(
                     `Error getting or creating user: ${err.message}`
                 );
+                return;
             }
 
             console.log(`user present ${userPDA?.toString()}`);
@@ -110,15 +149,49 @@ function Profile() {
                 setStorageAccount(storageAccounts[0]);
             }
 
+            console.log(
+                "storage accont present",
+                storageAccount?.publicKey.toString()
+            );
+
+            let avatarUrl;
+            let profileUrl;
             // Check for profile metadata file in storage
-            if (!profileMetadata) {
+            if (!profileMetadataUrl) {
                 if (storageAccount) {
                     // profile metadata URI should have name, bio, username, avatar
+
+                    // Upload a static placeholder image for now
+                    console.log("Does this even work?");
+
+                    if (!dpUrl) {
+                        const r = await fetch("./dp.png");
+                        const re = await r.blob();
+
+                        let dp = new File([re], "dp.png", re);
+                        console.log(dp);
+                        try {
+                            let upload = await drive.uploadFile(
+                                storageAccount.publicKey,
+                                dp
+                            );
+                            let url = new URL(
+                                upload.finalized_locations[0]
+                            ).toString();
+                            avatarUrl = url;
+                            setDpUrl(url);
+                        } catch (e) {
+                            console.log(`Image upload failed`);
+                            return;
+                        }
+                    }
+
+                    console.log(avatarUrl);
                     // TODO: populate data from inputs
                     const data = {
                         name: "John doe",
                         bio: "What's up there?",
-                        avatar: "", // TOOD: add minidenticons later as defaults
+                        avatar: avatarUrl, // TOOD: add minidenticons later as defaults
                         username: "jondoe",
                     };
 
@@ -141,11 +214,56 @@ function Profile() {
                         let url = new URL(
                             upload.finalized_locations[0]
                         ).toString();
-                        setProfileMetadata(url);
+                        setProfileMetadataUrl(url);
+                        profileUrl = url;
                     } catch (e) {
                         console.log("Upload failed", upload?.upload_errors);
                     }
                 }
+            }
+
+            console.log(`Profile metadata file is at ${profileUrl}`);
+
+            // Create Profile
+            // This wont work cause of indexer issue - get and create separateyly
+            // const profile = await getOrCreateProfile();
+            let profilePDA;
+
+            try {
+                if (userPDA) {
+                    profilePDA = await getProfile(userPDA, "Personal");
+                    console.log(`Found profile with ${profilePDA?.toString()}`);
+                }
+
+                if (!profilePDA && profileUrl && userPDA) {
+                    console.log("Creating profile with metadata");
+
+                    const createProfile = await sdk.profile.create(
+                        userPDA,
+                        "Personal",
+                        wallet?.publicKey
+                    );
+                    const profileMetadata = await sdk.profileMetadata.create(
+                        profileUrl,
+                        createProfile.profilePDA,
+                        userPDA,
+                        wallet?.publicKey
+                    );
+                    const profileMetadataIx =
+                        await profileMetadata.instructionMethodBuilder.instruction();
+
+                    const tx =
+                        createProfile.instructionMethodBuilder.postInstructions(
+                            [profileMetadataIx]
+                        );
+
+                    const result = await tx.rpc();
+                    console.log();
+                }
+            } catch (err: any) {
+                throw new Error(
+                    `Error getting or creating profile: ${err.message}`
+                );
             }
         }
     };
