@@ -1,8 +1,6 @@
 import { ReactNode } from "react";
 import Layout from "../layout";
-import theme from "../../theme/index";
 import { MAINNET_RPC } from "@/constants/endpoints";
-import { ChakraProvider } from "@chakra-ui/react";
 import {
     ConnectionProvider,
     WalletProvider,
@@ -24,9 +22,7 @@ const Providers = ({ children }: { children: ReactNode }) => {
         >
             <WalletProvider wallets={wallets}>
                 <WalletModalProvider>
-                    <ChakraProvider theme={theme}>
-                        <Layout>{children}</Layout>
-                    </ChakraProvider>
+                    <Layout>{children}</Layout>
                 </WalletModalProvider>
             </WalletProvider>
         </ConnectionProvider>

@@ -232,11 +232,14 @@ function Profile() {
     };
 
     return (
-        <div>
-            {wallet?.publicKey && (
-                <button onClick={handleClick}>Create Account</button>
-            )}
-        </div>
+        <>
+            <h1 className="text-2xl font-thin underline">Profile Page</h1>
+            <div>
+                {wallet?.publicKey && (
+                    <button onClick={handleClick}>Create Account</button>
+                )}
+            </div>
+        </>
     );
 }
 
