@@ -3,16 +3,22 @@ import { useCreateUser, useCreateProfile } from "@gumhq/react-sdk";
 import { useGumSDK } from "@/hooks/useGumSdk";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { ShdwDrive, StorageAccountResponse } from "@shadow-drive/sdk";
-import * as anchor from "@coral-xyz/anchor";
 import randomBytes from "randombytes";
 import { SHADOW_DRIVE_ENDPOINT } from "@/constants/endpoints";
 import { getProfile, getUser } from "@/helpers/fetchData";
-
-const { PublicKey } = anchor.web3;
+import { useShadowDrive } from "@/hooks/useShadowDrive";
 
 function Profile() {
     const wallet = useWallet();
     const { connection } = useConnection();
+    const connected = wallet.connected;
+
+    const {
+        findUrlByFileName,
+        getOrCreateStorageAccountByName,
+        drive,
+        getStorageAccounts,
+    } = useShadowDrive(wallet, connection);
 
     const sdk = useGumSDK();
     const { getOrCreate: getOrCreateUser, create: createUser } =
@@ -23,7 +29,6 @@ function Profile() {
         createProfileIxMethodBuilder,
     } = useCreateProfile(sdk);
 
-    const [drive, setDrive] = useState<ShdwDrive>();
     const [storageAccount, setStorageAccount] =
         useState<StorageAccountResponse>();
     const [profileMetadataUrl, setProfileMetadataUrl] = useState<string | null>(
@@ -31,90 +36,48 @@ function Profile() {
     );
     const [dpUrl, setDpUrl] = useState<string | null>(null);
 
-    // Init Drive
     useEffect(() => {
-        async function initDrive() {
-            // TODO: Need to have SHDW, Pre transaction convert SHD as required.
-            try {
-                const drive = await new ShdwDrive(connection, wallet).init();
-                setDrive(drive);
-            } catch (e) {
-                console.log("handled");
+        async function getStorage() {
+            const acc = await getStorageAccounts();
+            if (acc) {
+                setStorageAccount(acc[0]);
             }
         }
-        if (wallet && connection) {
-            initDrive();
-        }
-    }, [wallet]);
-
-    // Get Storage Accounts
-    useEffect(() => {
-        async function getAccounts() {
-            const accounts = await drive?.getStorageAccounts("v2");
-
-            if (!accounts) {
-                console.log("Storage not created");
-                return;
-            }
-
-            // Get the first account created
-            setStorageAccount(accounts[0]);
-        }
-        if (drive) {
-            getAccounts();
-        }
+        getStorage();
     }, [drive]);
 
     // Check if profile_metadata is present
     useEffect(() => {
-        async function checkForProfileMetaData() {
+        async function checkForFiles() {
             if (drive && storageAccount) {
-                const fileNames =
-                    (await drive.listObjects(storageAccount?.publicKey)) ?? [];
-                const metadataPresent =
-                    fileNames.keys.filter(
-                        (fileName: any) => fileName === "metadata.json"
-                    ).length > 0;
+                const metadataUrl = await findUrlByFileName(
+                    "metadata.json",
+                    storageAccount.publicKey
+                );
 
-                let url = "";
-                if (metadataPresent) {
-                    url =
-                        SHADOW_DRIVE_ENDPOINT +
-                        `${storageAccount.publicKey}/metadata.json`;
-                    url = new URL(url).toString();
-                    setProfileMetadataUrl(url);
-                }
+                setProfileMetadataUrl(metadataUrl ?? "");
             }
         }
-        checkForProfileMetaData();
+        checkForFiles();
     }, [storageAccount, drive]);
 
-    // Check if profile_metadata is present
+    // Check if dp.png is present
     useEffect(() => {
         async function checkForDp() {
             if (drive && storageAccount) {
-                const fileNames =
-                    (await drive.listObjects(storageAccount?.publicKey)) ?? [];
-                const dpPresent =
-                    fileNames.keys.filter(
-                        (fileName: any) => fileName === "dp.png"
-                    ).length > 0;
+                const dpUrl = await findUrlByFileName(
+                    "dp.png",
+                    storageAccount.publicKey
+                );
 
-                let url = "";
-                if (dpPresent) {
-                    url =
-                        SHADOW_DRIVE_ENDPOINT +
-                        `${storageAccount.publicKey}/dp.png`;
-                    url = new URL(url).toString();
-                    setDpUrl(url);
-                }
+                setProfileMetadataUrl(dpUrl ?? "");
             }
         }
         checkForDp();
     }, [storageAccount, drive]);
 
     const handleClick = async () => {
-        if (wallet?.publicKey && wallet && drive) {
+        if (connected && drive && wallet?.publicKey) {
             // Get or Create User
             // This doesnt work at the moment, cause mainnet indexers need updation
             // let userPDA = await getOrCreateUser(wallet?.publicKey);
