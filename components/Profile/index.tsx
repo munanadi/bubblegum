@@ -233,11 +233,43 @@ function Profile() {
 
     return (
         <>
-            <h1 className="text-2xl font-thin underline">Profile Page</h1>
-            <div>
-                {wallet?.publicKey && (
-                    <button onClick={handleClick}>Create Account</button>
-                )}
+            <div className="bg-white p-3 w-full">
+                <h1 className="text-gray-900 font-bold text-xl leading-8 my-1">
+                    {wallet?.publicKey
+                        ? `Hello ${wallet?.publicKey.toString()}`
+                        : `Please Connect your wallet`}
+                </h1>
+                <>
+                    {wallet?.publicKey ? (
+                        <>
+                            <button
+                                onClick={handleClick}
+                                className="bg-black rounded-sm text-white p-2"
+                            >
+                                Create Account
+                            </button>
+                            <ul className="bg-gray-100 text-gray-600py-2 px-3 mt-3 divide-y rounded shadow-sm">
+                                <li className="flex items-center py-3">
+                                    <span>User Account</span>
+                                    <span className="ml-auto">
+                                        <span className="bg-green-500 py-1 px-2 rounded text-white text-sm">
+                                            Active
+                                        </span>
+                                    </span>
+                                </li>
+
+                                <li className="flex items-center py-3">
+                                    <span>Profile Account</span>
+                                    <span className="ml-auto">
+                                        <span className="bg-green-500 py-1 px-2 rounded text-white text-sm">
+                                            Active
+                                        </span>
+                                    </span>
+                                </li>
+                            </ul>
+                        </>
+                    ) : null}
+                </>
             </div>
         </>
     );
