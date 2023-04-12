@@ -1,6 +1,12 @@
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import "@solana/wallet-adapter-react-ui/styles.css";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+
+const ReactUIWalletConnectButtonDynamic = dynamic(
+    async () =>
+        (await import("@solana/wallet-adapter-react-ui")).WalletMultiButton,
+    { ssr: false }
+);
 
 export default function NavBar() {
     return (
@@ -78,14 +84,8 @@ export default function NavBar() {
                                     />
                                 </svg>
                             </div>
-                            <>
-                                {/* TODO:  Works but errors out, replace it with a custom modal later */}
-                                <WalletMultiButton
-                                    startIcon={undefined}
-                                    endIcon={undefined}
-                                    className="bg-black"
-                                ></WalletMultiButton>
-                            </>
+
+                            <ReactUIWalletConnectButtonDynamic className="bg-black"></ReactUIWalletConnectButtonDynamic>
                         </div>
                     </div>
                 </div>
