@@ -1,17 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { useCreateUser, useCreateProfile } from "@gumhq/react-sdk";
-import { useGumSDK } from "@/hooks/useGumSdk";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { ShdwDrive, StorageAccountResponse } from "@shadow-drive/sdk";
-import randomBytes from "randombytes";
-import { SHADOW_DRIVE_ENDPOINT } from "@/constants/endpoints";
-import { getProfile, getUser } from "@/helpers/fetchData";
 import { useShadowDrive } from "@/hooks/useShadowDrive";
+import { useAppState } from "@/store/AppState";
+import { useGumStuff } from "@/hooks/useGumStuff";
 
 function Profile() {
-    const wallet = useWallet();
-    const { connection } = useConnection();
-    const connected = wallet.connected;
+    const wallet = useAppState(state => state.wallet);
+    const connected = useAppState(state => state.wallet?.connected);
+    const connection = useAppState(state => state.connection);
+    const sdk = useAppState(state => state.gumSdk);
 
     const {
         findUrlByFileName,
@@ -20,14 +17,7 @@ function Profile() {
         getStorageAccounts,
     } = useShadowDrive(wallet, connection);
 
-    const sdk = useGumSDK();
-    const { getOrCreate: getOrCreateUser, create: createUser } =
-        useCreateUser(sdk);
-    const {
-        getOrCreate: getOrCreateProfile,
-        create: createProfile,
-        createProfileIxMethodBuilder,
-    } = useCreateProfile(sdk);
+    const { getOrCreateUser, getOrCreateProfile } = useGumStuff(sdk);
 
     const [storageAccount, setStorageAccount] =
         useState<StorageAccountResponse>();
@@ -77,24 +67,11 @@ function Profile() {
     }, [storageAccount, drive]);
 
     const handleClick = async () => {
-        if (connected && drive && wallet?.publicKey) {
+        if (connected && drive && wallet?.publicKey && sdk) {
             // Get or Create User
             // This doesnt work at the moment, cause mainnet indexers need updation
             // let userPDA = await getOrCreateUser(wallet?.publicKey);
-            let userPDA;
-            try {
-                userPDA = await getUser(wallet?.publicKey);
-
-                if (!userPDA) {
-                    userPDA = await createUser(wallet?.publicKey);
-                }
-            } catch (err: any) {
-                throw new Error(
-                    `Error getting or creating user: ${err.message}`
-                );
-                return;
-            }
-
+            const userPDA = await getOrCreateUser(wallet.publicKey);
             console.log(`user present ${userPDA?.toString()}`);
 
             // No storage account, Create one
@@ -192,40 +169,11 @@ function Profile() {
             // const profile = await getOrCreateProfile();
             let profilePDA;
 
-            try {
-                if (userPDA) {
-                    profilePDA = await getProfile(userPDA, "Personal");
-                    console.log(`Found profile with ${profilePDA?.toString()}`);
-                }
-
-                if (!profilePDA && profileUrl && userPDA) {
-                    console.log("Creating profile with metadata");
-
-                    const createProfile = await sdk.profile.create(
-                        userPDA,
-                        "Personal",
-                        wallet?.publicKey
-                    );
-                    const profileMetadata = await sdk.profileMetadata.create(
-                        profileUrl,
-                        createProfile.profilePDA,
-                        userPDA,
-                        wallet?.publicKey
-                    );
-                    const profileMetadataIx =
-                        await profileMetadata.instructionMethodBuilder.instruction();
-
-                    const tx =
-                        createProfile.instructionMethodBuilder.postInstructions(
-                            [profileMetadataIx]
-                        );
-
-                    const result = await tx.rpc();
-                    console.log();
-                }
-            } catch (err: any) {
-                throw new Error(
-                    `Error getting or creating profile: ${err.message}`
+            if (userPDA && profileUrl) {
+                profilePDA = await getOrCreateProfile(
+                    userPDA,
+                    "Personal",
+                    profileUrl
                 );
             }
         }

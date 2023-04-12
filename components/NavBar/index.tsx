@@ -1,6 +1,16 @@
+import { GUM_MAINNET_GRAPHQL, MAINNET_CLUSTER } from "@/constants/endpoints";
+import { useAppState } from "@/store/AppState";
+import { useGum } from "@gumhq/react-sdk";
+import {
+    AnchorWallet,
+    useConnection,
+    useWallet,
+} from "@solana/wallet-adapter-react";
 import "@solana/wallet-adapter-react-ui/styles.css";
+import { GraphQLClient } from "graphql-request";
 import dynamic from "next/dynamic";
 import Link from "next/link";
+import { useEffect } from "react";
 
 const ReactUIWalletConnectButtonDynamic = dynamic(
     async () =>
@@ -9,6 +19,35 @@ const ReactUIWalletConnectButtonDynamic = dynamic(
 );
 
 export default function NavBar() {
+    const wallet = useWallet();
+    const { connection } = useConnection();
+    const setWallet = useAppState(state => state.setWallet);
+    const setConnection = useAppState(state => state.setConnection);
+    const setGumSdk = useAppState(state => state.setGumSdk);
+
+    const anchorWallet = wallet.wallet as any as AnchorWallet;
+
+    const gqlClient = new GraphQLClient(GUM_MAINNET_GRAPHQL);
+    const cluster = MAINNET_CLUSTER;
+
+    const sdk = useGum(
+        anchorWallet,
+        connection,
+        { preflightCommitment: "confirmed" },
+        cluster,
+        gqlClient
+    );
+    setGumSdk(sdk);
+
+    useEffect(() => {
+        if (wallet) {
+            setWallet(wallet);
+        }
+        if (connection) {
+            setConnection(connection);
+        }
+    }, [wallet.connected]);
+
     return (
         <div>
             <div className="bg-white sticky top-0 shadow-sm">

@@ -23,23 +23,23 @@ export interface ShadowDriveHook {
 }
 
 export const useShadowDrive = (
-    wallet: WalletContextState,
-    connection: anchor.web3.Connection
+    wallet: WalletContextState | undefined,
+    connection: anchor.web3.Connection | undefined
 ): ShadowDriveHook => {
     const [drive, setDrive] = useState<ShdwDrive | null>(null);
 
-    const { connected } = wallet;
-
     useEffect(() => {
         const initDrive = async () => {
-            const drive = await new ShdwDrive(connection, wallet).init();
-            setDrive(drive);
+            if (wallet && connection) {
+                const drive = await new ShdwDrive(connection, wallet).init();
+                setDrive(drive);
+            }
         };
 
-        if (connected) {
+        if (wallet?.connected) {
             initDrive();
         }
-    }, [connected]);
+    }, [wallet?.connected]);
 
     useEffect(() => {
         getStorageAccounts();
