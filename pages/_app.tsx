@@ -5,10 +5,10 @@ import "@/styles/globals.css";
 
 export default function App({ Component, pageProps }: AppProps) {
     return (
-        <Suspense>
-            <Providers>
-                <Component {...pageProps} />
-            </Providers>
-        </Suspense>
+        // <Suspense fallback={<div>loading...</div>}>
+        <Providers>
+            <Component {...pageProps} />
+        </Providers>
+        // </Suspense>
     );
 }
