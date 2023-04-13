@@ -13,10 +13,12 @@ const Profile: FC<{ children: ReactNode }> = ({ children }) => {
     const userPDA = useAppState(state => state.userPDA);
     const profilePDA = useAppState(state => state.profilePDA);
 
-    console.log({ userPDA, profilePDA, sdk, connection, wallet, connected });
+    const storageAccount = useAppState(state => state.storageAccount);
 
-    const [storageAccount, setStorageAccount] =
-        useState<StorageAccountResponse>();
+    const publickey = wallet?.publicKey;
+
+    // console.log({ userPDA, profilePDA, sdk, connection, wallet, connected });
+
     const [profileMetadataUrl, setProfileMetadataUrl] = useState<string | null>(
         null
     );
@@ -30,16 +32,6 @@ const Profile: FC<{ children: ReactNode }> = ({ children }) => {
     } = useShadowDrive(wallet, connection);
 
     const { getOrCreateUser, getOrCreateProfile } = useGumStuff();
-
-    useEffect(() => {
-        async function getStorage() {
-            const acc = await getStorageAccounts();
-            if (acc) {
-                setStorageAccount(acc[0]);
-            }
-        }
-        getStorage();
-    }, [drive]);
 
     // Check if profile_metadata is present
     useEffect(() => {
@@ -91,7 +83,7 @@ const Profile: FC<{ children: ReactNode }> = ({ children }) => {
                 );
                 const storageAccounts = await drive.getStorageAccounts("v2");
                 // TODO: First storage account is picked. Maybe check for other accounts and pick with a certain name
-                setStorageAccount(storageAccounts[0]);
+                // setStorageAccount(storageAccounts[0]);
             }
 
             console.log(
@@ -187,39 +179,23 @@ const Profile: FC<{ children: ReactNode }> = ({ children }) => {
         <>
             <div className="bg-white p-3 w-full">
                 <h1 className="text-gray-900 font-bold text-xl leading-8 my-1">
-                    {wallet?.publicKey
-                        ? `Hello ${wallet?.publicKey.toString()}`
-                        : `Please Connect your wallet`}
+                    {!publickey && `Please Connect your Wallet`}
+                    {publickey &&
+                        (!profilePDA || !userPDA) &&
+                        `Head to create profile to create profile`}
+                    {publickey &&
+                        profilePDA &&
+                        userPDA &&
+                        `Here is a list of your posts`}
                 </h1>
                 <>
-                    {wallet?.publicKey ? (
-                        <>
-                            <button
-                                onClick={handleClick}
-                                className="bg-black rounded-sm text-white p-2"
-                            >
-                                Create Account
-                            </button>
-                            <ul className="bg-gray-100 text-gray-600py-2 px-3 mt-3 divide-y rounded shadow-sm">
-                                <li className="flex items-center py-3">
-                                    <span>User Account</span>
-                                    <span className="ml-auto">
-                                        <span className="bg-green-500 py-1 px-2 rounded text-white text-sm">
-                                            Active
-                                        </span>
-                                    </span>
-                                </li>
-
-                                <li className="flex items-center py-3">
-                                    <span>Profile Account</span>
-                                    <span className="ml-auto">
-                                        <span className="bg-green-500 py-1 px-2 rounded text-white text-sm">
-                                            Active
-                                        </span>
-                                    </span>
-                                </li>
-                            </ul>
-                        </>
+                    {publickey ? (
+                        <button
+                            onClick={handleClick}
+                            className="bg-black rounded-sm text-white p-2"
+                        >
+                            Create Account
+                        </button>
                     ) : null}
                 </>
             </div>
