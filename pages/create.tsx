@@ -5,12 +5,27 @@ import { useAppState } from "@/store/AppState";
 
 import * as z from "zod";
 import { Form, useZodForm } from "@/components/Form";
+import { ChangeEvent, useEffect, useState } from "react";
+import ChooseFile from "@/components/ChooseFile";
+import { useShadowDrive } from "@/hooks/useShadowDrive";
 
 const Create = () => {
+    const [fileUrl, setFileUrl] = useState<string>();
+    const [fileName, setFileName] = useState<string>();
+    const [loading, setLoading] = useState<boolean>(false);
+    const [error, setError] = useState<boolean>(false);
+
     const userPDA = useAppState(state => state.userPDA);
     const profilePDA = useAppState(state => state.profilePDA);
+    const wallet = useAppState(state => state.wallet);
+    const connection = useAppState(state => state.connection);
+    const setStroageAccount = useAppState(state => state.setStroageAccount);
 
     const { getOrCreateUser, getOrCreateProfile } = useGumStuff();
+    const { drive, getOrCreateStorageAccountByName } = useShadowDrive(
+        wallet,
+        connection
+    );
 
     const schema = z.object({
         name: z.string().min(3, { message: "min of 3 character" }),
@@ -26,6 +41,50 @@ const Create = () => {
             bio: "",
         },
     });
+
+    const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+        event.preventDefault();
+        setLoading(true);
+        setError(false);
+        const file = event.target.files?.[0];
+        const fileName = file?.name;
+
+        // TODO: Definitely need a better name for the buckert
+        let storageAccount;
+
+        storageAccount = await getOrCreateStorageAccountByName("firstBucket");
+
+        if (!file || !drive || !storageAccount?.publicKey) {
+            return;
+        }
+
+        let response;
+        try {
+            response = await drive.uploadFile(storageAccount.publicKey, file);
+        } catch (e) {
+            console.log(e);
+            setError(true);
+            setLoading(false);
+            return;
+        }
+        console.log({ response });
+
+        if (response.upload_errors.length !== 0) {
+            setLoading(false);
+            setError(true);
+        }
+
+        if (response.finalized_locations[0]) {
+            setLoading(false);
+            setFileUrl(response.finalized_locations[0]);
+            setFileName(fileName);
+        }
+
+        // Clear input
+        (event.target as HTMLInputElement).value = "";
+        setLoading(false); // This should not happen though
+        setStroageAccount(storageAccount);
+    };
 
     return (
         <>
@@ -103,19 +162,15 @@ const Create = () => {
                     {...form.register("bio")}
                 ></InputField>
 
-                {/* <div className="flex flex-col w-full h-full p-1 overflow-auto">
-                    <label
-                        htmlFor="avatar"
-                        className="block text-sm font-medium text-neutral-600"
-                    >
-                        Upload your avatar
-                    </label>
-                    <div className="flex flex-col items-center justify-center py-6 text-base bg-white border border-dashed rounded-lg text-gray-500 mt-2 focus:border-gray-500 focus:outline-none ">
-                        <button className="w-auto my-2 py-2 px-1 border rounded-md text-gray-500 hover:text-gray-600 text-md hover:bg-gray-100">
-                            Upload a file
-                        </button>
-                    </div>
-                </div> */}
+                <ChooseFile
+                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
+                        handleUpload(event)
+                    }
+                    loading={loading}
+                    error={error}
+                    fileName={fileName}
+                    fileUrl={fileUrl}
+                />
 
                 <button
                     type="submit"
