@@ -1,7 +1,6 @@
 import React, { FC, ReactNode } from "react";
 import NavBar from "../NavBar";
 import { ErrorBoundary } from "react-error-boundary";
-import Profile from "../Profile";
 import Footer from "../Footer";
 
 interface LayoutProps {

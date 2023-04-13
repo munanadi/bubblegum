@@ -1,14 +1,26 @@
-import React, { useEffect, useState } from "react";
-import { ShdwDrive, StorageAccountResponse } from "@shadow-drive/sdk";
+import { useGumStuff } from "@/hooks/useGumStuff";
 import { useShadowDrive } from "@/hooks/useShadowDrive";
 import { useAppState } from "@/store/AppState";
-import { useGumStuff } from "@/hooks/useGumStuff";
+import { StorageAccountResponse } from "@shadow-drive/sdk";
+import { FC, ReactNode, useEffect, useState } from "react";
 
-function Profile() {
+const Profile: FC<{ children: ReactNode }> = ({ children }) => {
     const wallet = useAppState(state => state.wallet);
     const connected = useAppState(state => state.wallet?.connected);
     const connection = useAppState(state => state.connection);
     const sdk = useAppState(state => state.gumSdk);
+
+    const userPDA = useAppState(state => state.userPDA);
+    const profilePDA = useAppState(state => state.profilePDA);
+
+    console.log({ userPDA, profilePDA, sdk, connection, wallet, connected });
+
+    const [storageAccount, setStorageAccount] =
+        useState<StorageAccountResponse>();
+    const [profileMetadataUrl, setProfileMetadataUrl] = useState<string | null>(
+        null
+    );
+    const [dpUrl, setDpUrl] = useState<string | null>(null);
 
     const {
         findUrlByFileName,
@@ -17,14 +29,7 @@ function Profile() {
         getStorageAccounts,
     } = useShadowDrive(wallet, connection);
 
-    const { getOrCreateUser, getOrCreateProfile } = useGumStuff(sdk);
-
-    const [storageAccount, setStorageAccount] =
-        useState<StorageAccountResponse>();
-    const [profileMetadataUrl, setProfileMetadataUrl] = useState<string | null>(
-        null
-    );
-    const [dpUrl, setDpUrl] = useState<string | null>(null);
+    const { getOrCreateUser, getOrCreateProfile } = useGumStuff();
 
     useEffect(() => {
         async function getStorage() {
@@ -167,10 +172,9 @@ function Profile() {
             // Create Profile
             // This wont work cause of indexer issue - get and create separateyly
             // const profile = await getOrCreateProfile();
-            let profilePDA;
 
             if (userPDA && profileUrl) {
-                profilePDA = await getOrCreateProfile(
+                let profilePDA = await getOrCreateProfile(
                     userPDA,
                     "Personal",
                     profileUrl
@@ -221,6 +225,6 @@ function Profile() {
             </div>
         </>
     );
-}
+};
 
 export default Profile;

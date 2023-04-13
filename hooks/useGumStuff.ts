@@ -1,9 +1,17 @@
-import { SDK } from "@gumhq/react-sdk";
+import { SDK, useGum } from "@gumhq/react-sdk";
 import { Namespace } from "@gumhq/sdk";
 import { PublicKey } from "@solana/web3.js";
 import { getProfile, getUser } from "@/helpers/fetchData";
 import randomBytes from "randombytes";
 import { useAppState } from "@/store/AppState";
+import { useEffect } from "react";
+import {
+    AnchorWallet,
+    useConnection,
+    useWallet,
+} from "@solana/wallet-adapter-react";
+import { GraphQLClient } from "graphql-request";
+import { GUM_MAINNET_GRAPHQL, MAINNET_CLUSTER } from "@/constants/endpoints";
 
 export interface GumStuff {
     sdk: SDK | undefined;
@@ -15,12 +23,57 @@ export interface GumStuff {
     ) => Promise<PublicKey | undefined>;
 }
 
-export const useGumStuff = (sdk: SDK | undefined): GumStuff => {
+export const useGumStuff = (): GumStuff => {
     const setUserPDA = useAppState(state => state.setUserPDA);
     const setProfilePDA = useAppState(state => state.setProfilePDA);
     const setTxHash = useAppState(state => state.setTxHash);
-    const wallet = useAppState(state => state.wallet);
+    // const wallet = useAppState(state => state.wallet);
+
+    const wallet = useWallet();
     const publicKey = wallet?.publicKey;
+    const { connection } = useConnection();
+    const setWallet = useAppState(state => state.setWallet);
+    const setConnection = useAppState(state => state.setConnection);
+    const setGumSdk = useAppState(state => state.setGumSdk);
+
+    const anchorWallet = wallet.wallet as any as AnchorWallet;
+
+    const gqlClient = new GraphQLClient(GUM_MAINNET_GRAPHQL);
+    const cluster = MAINNET_CLUSTER;
+
+    const sdk = useGum(
+        anchorWallet,
+        connection,
+        { preflightCommitment: "confirmed" },
+        cluster,
+        gqlClient
+    );
+
+    useEffect(() => {
+        setGumSdk(sdk);
+
+        if (wallet) {
+            setWallet(wallet);
+        }
+        if (connection) {
+            setConnection(connection);
+        }
+        (async () => {
+            let userPDA;
+            if (wallet.publicKey) {
+                userPDA = await getUser(wallet.publicKey);
+                if (userPDA) {
+                    setUserPDA(userPDA);
+                }
+            }
+            if (wallet.publicKey && userPDA) {
+                let profilePDA = await getProfile(userPDA, "Personal");
+                if (profilePDA) {
+                    setProfilePDA(profilePDA);
+                }
+            }
+        })();
+    }, [wallet.connected, sdk]);
 
     /**
      * Function that takes a wallet address and returns its userPDA or creates one for it.

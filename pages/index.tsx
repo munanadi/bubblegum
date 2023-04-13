@@ -1,10 +1,11 @@
 // import { Inter } from "next/font/google";
 // import NoSSR from "react-no-ssr";
 import { ReactNode } from "react";
-import Profile from "@/components/Profile";
 
 // const inter = Inter({ subsets: ["latin"] });
 
-export default function Home({ children }: { children: ReactNode }) {
-    return <Profile />;
-}
+const Home = ({ children }: { children: ReactNode }) => {
+    return <h1>Explore feed should come here!</h1>;
+};
+
+export default Home;
