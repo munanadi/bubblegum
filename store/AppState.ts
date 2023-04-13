@@ -1,4 +1,5 @@
 import { SDK } from "@gumhq/react-sdk";
+import { StorageAccountResponse } from "@shadow-drive/sdk";
 import { WalletContextState } from "@solana/wallet-adapter-react";
 import { PublicKey, Connection } from "@solana/web3.js";
 import { create } from "zustand";
@@ -22,6 +23,12 @@ interface AppState {
     // tx Sig
     txHash: string | undefined;
     setTxHash: (txHash: string) => void;
+    // shadow storage account
+    storageAccount: StorageAccountResponse | undefined;
+    setStroageAccount: (account: StorageAccountResponse) => void;
+    // shadow storage accounts // TODO: Not required, save the only required account
+    storageAccounts: StorageAccountResponse[] | undefined;
+    setStroageAccounts: (account: StorageAccountResponse[]) => void;
 }
 
 export const useAppState = create<AppState>(set => ({
@@ -43,4 +50,12 @@ export const useAppState = create<AppState>(set => ({
     // tx Sig
     txHash: undefined,
     setTxHash: (txHash: string) => set(() => ({ txHash })),
+    // shadow storage account
+    storageAccount: undefined,
+    setStroageAccount: (storageAccount: StorageAccountResponse) =>
+        set({ storageAccount }),
+    // shadow storage accounts // TODO: Not required, save the only required account
+    storageAccounts: undefined,
+    setStroageAccounts: (storageAccounts: StorageAccountResponse[]) =>
+        set({ storageAccounts }),
 }));

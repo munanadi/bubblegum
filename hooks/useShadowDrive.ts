@@ -1,14 +1,10 @@
-import {
-    CreateStorageResponse,
-    ShdwDrive,
-    StorageAccount,
-    StorageAccountResponse,
-} from "@shadow-drive/sdk";
-// import { bytesToHuman } from "@shadow-drive/sdk/dist/utils/helpers"
+import { ShdwDrive, StorageAccountResponse } from "@shadow-drive/sdk";
 import { useEffect, useState } from "react";
 import * as anchor from "@coral-xyz/anchor";
 import { SHADOW_DRIVE_ENDPOINT } from "@/constants/endpoints";
 import { WalletContextState } from "@solana/wallet-adapter-react";
+import { bytesToHuman } from "@/helpers/shadowDrive";
+import { useAppState } from "@/store/AppState";
 
 export interface ShadowDriveHook {
     drive: ShdwDrive | null;
@@ -19,7 +15,10 @@ export interface ShadowDriveHook {
     ) => Promise<string | undefined>;
     getOrCreateStorageAccountByName: (
         storageAccountName: string
-    ) => Promise<StorageAccount | undefined>;
+    ) => Promise<StorageAccountResponse | undefined>;
+    getStorageAccountWithName: (
+        StorageAccountName: string
+    ) => Promise<StorageAccountResponse | undefined>;
 }
 
 export const useShadowDrive = (
@@ -27,6 +26,9 @@ export const useShadowDrive = (
     connection: anchor.web3.Connection | undefined
 ): ShadowDriveHook => {
     const [drive, setDrive] = useState<ShdwDrive | null>(null);
+
+    const setStorageAccounts = useAppState(state => state.setStroageAccounts);
+    const setStorageAccount = useAppState(state => state.setStroageAccount);
 
     useEffect(() => {
         const initDrive = async () => {
@@ -59,7 +61,26 @@ export const useShadowDrive = (
             return [];
         }
 
+        setStorageAccounts(accounts);
         return accounts;
+    };
+
+    /**
+     * Function return a storage account with a given identifer
+     */
+    const getStorageAccountWithName = async (storageAccountName: string) => {
+        const accounts = await getStorageAccounts();
+
+        const storageAccount = accounts.filter(
+            acc => acc.account.identifier === storageAccountName
+        );
+
+        if (storageAccount) {
+            setStorageAccount(storageAccount[0]);
+            return storageAccount[0];
+        }
+
+        return undefined;
     };
 
     /**
@@ -103,20 +124,15 @@ export const useShadowDrive = (
             throw new Error("Drive is not initalized");
         }
 
-        // get list of all storage accounts
-        const accounts = await getStorageAccounts();
-
         // check for the storage account with the input received
-        let account = accounts?.find(acc => {
-            acc.account.identifier === storageAccountName;
-        });
+        let account = await getStorageAccountWithName(storageAccountName);
 
         // If storage account not found with the same name create one
         if (!account) {
             try {
                 await drive.createStorageAccount(
                     storageAccountName,
-                    "1GB",
+                    "500MB",
                     "v2"
                 );
             } catch (e) {
@@ -124,7 +140,10 @@ export const useShadowDrive = (
             }
         }
 
-        return account?.account;
+        if (account?.account) {
+            setStorageAccount(account);
+        }
+        return account;
     };
 
     return {
@@ -132,5 +151,6 @@ export const useShadowDrive = (
         getStorageAccounts,
         findUrlByFileName,
         getOrCreateStorageAccountByName,
+        getStorageAccountWithName,
     };
 };
