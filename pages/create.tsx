@@ -1,5 +1,5 @@
 import InputField from "@/components/InputField";
-import { getShortAddress } from "@/helpers/stuff";
+import { checkForShadowATA, getShortAddress } from "@/helpers/stuff";
 import { useGumStuff } from "@/hooks/useGumStuff";
 import { useAppState } from "@/store/AppState";
 
@@ -16,12 +16,16 @@ const Create = () => {
     const [error, setError] = useState<boolean>(false);
 
     const userPDA = useAppState(state => state.userPDA);
+    const setUserPDA = useAppState(state => state.setUserPDA);
     const profilePDA = useAppState(state => state.profilePDA);
+    const setProfilePDA = useAppState(state => state.setProfilePDA);
     const wallet = useAppState(state => state.wallet);
     const connection = useAppState(state => state.connection);
     const setStroageAccount = useAppState(state => state.setStroageAccount);
+    const storageAccount = useAppState(state => state.storageAccount);
 
-    const { getOrCreateUser, getOrCreateProfile } = useGumStuff();
+    const { getOrCreateUser, getOrCreateProfile, deleteProfile, deleteUser } =
+        useGumStuff();
     const { drive, getOrCreateStorageAccountByName } = useShadowDrive(
         wallet,
         connection
@@ -42,6 +46,70 @@ const Create = () => {
         },
     });
 
+    const handleFormSubmit = async ({
+        name,
+        username,
+        bio,
+    }: {
+        name: string;
+        username: string;
+        bio: string;
+    }) => {
+        if (!wallet?.publicKey || !fileUrl || !drive || !connection) {
+            console.log("form submit failed");
+            return;
+        }
+
+        const hasSHDWTokens = checkForShadowATA(wallet.publicKey, connection);
+
+        // TODO: Convert SOL -> SHD using Jupiter?
+        if (!hasSHDWTokens) {
+            alert("Get some $SHDW tokens");
+            console.log("SHD Token not present in wallet");
+            return;
+        }
+
+        // Check if userPDA exists, Create one if not
+        const userPDA = await getOrCreateUser(wallet.publicKey);
+        // Upload the metadata file
+        const data = {
+            name,
+            bio,
+            avatar: fileUrl, // TOOD: add minidenticons later as defaults
+            username,
+        };
+
+        // Check if profile PDA exists, Create one if not
+        // Construct the file to upload
+        let file = new File([JSON.stringify(data)], "metadata.json", {
+            type: "application/json",
+        });
+
+        if (!userPDA) {
+            console.log("user PDA not found or created. Fails");
+            return;
+        }
+
+        if (!storageAccount) {
+            console.log("storage account not found");
+            return;
+        }
+
+        const upload = await drive.uploadFile(storageAccount.publicKey, file);
+
+        let url = new URL(upload.finalized_locations[0]).toString();
+
+        // Create profile with metadata, navigate away to profile page
+        const profilePDA = await getOrCreateProfile(userPDA, "Personal", url);
+
+        if (!profilePDA) {
+            console.log("profile pda creation failed");
+            return;
+        }
+
+        setProfilePDA(profilePDA);
+    };
+
     const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
         event.preventDefault();
         setLoading(true);
@@ -49,10 +117,10 @@ const Create = () => {
         const file = event.target.files?.[0];
         const fileName = file?.name;
 
-        // TODO: Definitely need a better name for the buckert
+        // TODO: Definitely need a better name for the bucket
         let storageAccount;
 
-        storageAccount = await getOrCreateStorageAccountByName("firstBucket");
+        storageAccount = await getOrCreateStorageAccountByName("gum_bucket");
 
         if (!file || !drive || !storageAccount?.publicKey) {
             return;
@@ -64,25 +132,23 @@ const Create = () => {
         } catch (e) {
             console.log(e);
             setError(true);
-            setLoading(false);
             return;
+        } finally {
+            setLoading(false);
         }
         console.log({ response });
 
         if (response.upload_errors.length !== 0) {
-            setLoading(false);
             setError(true);
         }
 
         if (response.finalized_locations[0]) {
-            setLoading(false);
             setFileUrl(response.finalized_locations[0]);
             setFileName(fileName);
         }
 
         // Clear input
         (event.target as HTMLInputElement).value = "";
-        setLoading(false); // This should not happen though
         setStroageAccount(storageAccount);
     };
 
@@ -99,8 +165,23 @@ const Create = () => {
                     </p>
 
                     {userPDA ? (
-                        <div className="inline-flex gap-2 rounded bg-green-100 p-1 text-green-600">
-                            <span className="text-xs font-medium">Present</span>
+                        <div className="flex justify-between">
+                            <div className="inline-flex gap-2 rounded bg-green-100 p-1 text-green-600">
+                                <span className="text-xs font-medium">
+                                    Present
+                                </span>
+                            </div>
+                            <button
+                                disabled
+                                className="inline-flex gap-2 rounded bg-green-100 p-1 text-red-600"
+                                onClick={() =>
+                                    deleteUser(userPDA, wallet?.publicKey!)
+                                }
+                            >
+                                <div className="text-xs font-medium">
+                                    Delete
+                                </div>
+                            </button>
                         </div>
                     ) : (
                         <div className="inline-flex gap-2 rounded bg-red-100 p-1 text-red-600">
@@ -121,8 +202,27 @@ const Create = () => {
                     </p>
 
                     {profilePDA ? (
-                        <div className="inline-flex gap-2 rounded bg-green-100 p-1 text-green-600">
-                            <span className="text-xs font-medium">Present</span>
+                        <div className="flex justify-between">
+                            <div className="inline-flex gap-2 rounded bg-green-100 p-1 text-green-600">
+                                <span className="text-xs font-medium">
+                                    Present
+                                </span>
+                            </div>
+                            <button
+                                disabled
+                                className="inline-flex gap-2 rounded bg-green-100 p-1 text-red-600"
+                                onClick={() =>
+                                    deleteProfile(
+                                        profilePDA,
+                                        userPDA!,
+                                        wallet?.publicKey!
+                                    )
+                                }
+                            >
+                                <div className="text-xs font-medium">
+                                    Delete
+                                </div>
+                            </button>
                         </div>
                     ) : (
                         <div className="inline-flex gap-2 rounded bg-red-100 p-1 text-red-600">
@@ -137,9 +237,7 @@ const Create = () => {
             <Form
                 form={form}
                 className="page-center flex-col rounded-lg max-w-lg mx-auto mt-6"
-                onSubmit={({ name, username, bio }) => {
-                    console.log(name, username, bio);
-                }}
+                onSubmit={handleFormSubmit}
             >
                 <InputField
                     type="text"
