@@ -50,7 +50,7 @@ export const useGumStuff = (): GumStuff => {
     const gqlClient = new GraphQLClient(GUM_MAINNET_GRAPHQL);
     const cluster = MAINNET_CLUSTER;
 
-    const sdk = new SDK(
+    const sdk = useGum(
         anchorWallet,
         connection,
         { preflightCommitment: "confirmed" },
