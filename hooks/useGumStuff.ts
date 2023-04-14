@@ -21,6 +21,15 @@ export interface GumStuff {
         namespace: Namespace,
         profileMetadataUrl: string
     ) => Promise<PublicKey | undefined>;
+    deleteProfile: (
+        profileAccount: PublicKey,
+        userAccount: PublicKey,
+        owner: PublicKey
+    ) => Promise<string | undefined>;
+    deleteUser: (
+        userAccont: PublicKey,
+        owner: PublicKey
+    ) => Promise<string | undefined>;
 }
 
 export const useGumStuff = (): GumStuff => {
@@ -41,7 +50,7 @@ export const useGumStuff = (): GumStuff => {
     const gqlClient = new GraphQLClient(GUM_MAINNET_GRAPHQL);
     const cluster = MAINNET_CLUSTER;
 
-    const sdk = useGum(
+    const sdk = new SDK(
         anchorWallet,
         connection,
         { preflightCommitment: "confirmed" },
@@ -153,9 +162,48 @@ export const useGumStuff = (): GumStuff => {
         return profilePDA;
     };
 
+    // TODO: does not work. this.wallet.signTransaction is not a function
+    // Check with SDK?
+    const deleteProfile = async (
+        profileAccount: PublicKey,
+        userAccount: PublicKey,
+        owner: PublicKey
+    ): Promise<string | undefined> => {
+        if (!sdk) return;
+
+        const { program } = sdk;
+
+        const ixBuilder = sdk.profile.delete(
+            profileAccount,
+            userAccount,
+            owner
+        );
+        console.log({ ixBuilder });
+        console.log(await ixBuilder.transaction());
+
+        return await ixBuilder.rpc();
+    };
+
+    // TODO: does not work. this.wallet.signTransaction is not a function
+    // Check with SDK
+    const deleteUser = async (userAccount: PublicKey, owner: PublicKey) => {
+        if (!sdk) return;
+
+        const { program } = sdk;
+        return await program.methods
+            .deleteUser()
+            .accounts({
+                user: userAccount,
+                authority: owner,
+            })
+            .rpc();
+    };
+
     return {
         sdk,
         getOrCreateUser,
         getOrCreateProfile,
+        deleteProfile,
+        deleteUser,
     };
 };
