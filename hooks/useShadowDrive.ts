@@ -8,7 +8,9 @@ import { useAppState } from "@/store/AppState";
 
 export interface ShadowDriveHook {
     drive: ShdwDrive | null;
-    getStorageAccounts: () => Promise<StorageAccountResponse[] | []>;
+    getStorageAccounts: (
+        skipDeleted?: boolean
+    ) => Promise<StorageAccountResponse[] | []>;
     findUrlByFileName: (
         fileName: string,
         storageAccountPublickey: anchor.web3.PublicKey
@@ -44,24 +46,29 @@ export const useShadowDrive = (
     }, [wallet?.connected]);
 
     useEffect(() => {
-        getStorageAccounts();
+        getStorageAccounts(true);
     }, [drive]);
 
     /**
      * Returns a list of storage accounts under the wallet or []
+     * by default returns all accounts, use param to skip marked for deleted
+     * @param skipDeleted false by default, true to skip marked for deletion files
      */
-    const getStorageAccounts = async () => {
+    const getStorageAccounts = async (skipDeleted?: boolean) => {
         if (!drive) {
             return [];
         }
 
         let accounts = await drive.getStorageAccounts("v2");
 
+        if (skipDeleted) {
+            accounts = accounts.filter(acc => !acc.account.toBeDeleted);
+        }
+
         if (!accounts) {
             return [];
         }
 
-        setStorageAccounts(accounts);
         return accounts;
     };
 
@@ -69,7 +76,7 @@ export const useShadowDrive = (
      * Function return a storage account with a given identifer
      */
     const getStorageAccountWithName = async (storageAccountName: string) => {
-        const accounts = await getStorageAccounts();
+        const accounts = await getStorageAccounts(true);
 
         const storageAccount = accounts.filter(
             acc => acc.account.identifier === storageAccountName
