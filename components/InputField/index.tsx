@@ -1,4 +1,4 @@
-import { ReactNode, FC, HTMLInputTypeAttribute, forwardRef } from "react";
+import { ReactNode, FC, HTMLInputTypeAttribute, forwardRef, ChangeEventHandler } from "react";
 import { useFormContext } from "react-hook-form";
 
 interface InputFieldProps {
@@ -9,6 +9,7 @@ interface InputFieldProps {
     rows?: number;
     props?: any;
     name: string;
+    onChange: ChangeEventHandler<any>
 }
 
 interface FieldErrorProps {
@@ -38,7 +39,7 @@ export const FieldError: FC<FieldErrorProps> = ({ name }) => {
 };
 
 const InputField = forwardRef<HTMLInputElement, InputFieldProps>(function Input(
-    { children, type, name, label, placeHolder, ...props },
+    { children, type, name, label, placeHolder, onChange, ...props },
     ref
 ) {
     return (
@@ -55,6 +56,7 @@ const InputField = forwardRef<HTMLInputElement, InputFieldProps>(function Input(
                     name={name}
                     type={type}
                     placeholder={placeHolder}
+                    onChange={onChange}
                     {...props}
                     ref={ref}
                     className="block w-full px-5 py-3 text-base text-neutral-600 placeholder-gray-300  border border-transparent rounded-lg bg-gray-50 focus:outline-none focus:border-transparent focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-gray-300"

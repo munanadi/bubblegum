@@ -114,11 +114,10 @@ const Create = () => {
         setProfilePDA(profilePDA);
     };
 
-    const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
-        event.preventDefault();
+    const handleUpload = async (files: any) => {
         setLoading(true);
         setError(false);
-        const file = event.target.files?.[0];
+        const file = files;
         const fileName = file?.name;
 
         // TODO: Definitely need a better name for the bucket
@@ -152,7 +151,7 @@ const Create = () => {
         }
 
         // Clear input
-        (event.target as HTMLInputElement).value = "";
+        // (event.target as HTMLInputElement).value = "";
         setStroageAccount(storageAccount);
     };
 
@@ -248,6 +247,7 @@ const Create = () => {
                     label="Name"
                     placeHolder="Enter Name"
                     {...form.register("name")}
+                    onChange={e => setName(e.target.value)}
                 ></InputField>
 
                 <InputField
@@ -265,9 +265,11 @@ const Create = () => {
                 ></InputField>
 
                 <ChooseFile
-                    onChange={(event: ChangeEvent<HTMLInputElement>) =>
-                        handleUpload(event)
-                    }
+                    onChange={(event: ChangeEvent<HTMLInputElement>) => {
+                        event.preventDefault();
+                        handleUpload(event.target.files?.[0]);
+                    }}
+                    handleUpload={handleUpload}
                     loading={loading}
                     error={error}
                     fileName={fileName}

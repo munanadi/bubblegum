@@ -1,26 +1,52 @@
 import { ReactNode, FC, ChangeEvent } from "react";
 import Spinner from "../Spinner";
+import { identicon } from "minidenticons";
+import { useMemo } from "react";
 
 // TODO: Figure out to make this more intuative
 interface ChooseFileProps {
     children?: ReactNode;
-    onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+    onChange: (event: any) => void;
+    handleUpload: (file: any) => void;
     loading: boolean;
     fileUrl: string | undefined;
     error: boolean;
     fileName: string | undefined;
+    iconName: string;
 }
+
+let file: File | null;
+
+const IdenticonImg = ({ username, saturation, lightness, ...props }: any) => {
+    const svgURI = useMemo(
+        () =>
+            "data:image/svg+xml;utf8," +
+            encodeURIComponent(identicon(username, saturation, lightness)),
+        [username, saturation, lightness]
+    );
+
+    const data = identicon(username, saturation, lightness);
+
+    file = new File([data], "dp.svg", {
+        type: "text/svg",
+    });
+
+    return <img src={svgURI} alt={username} {...props} />;
+};
+
 const ChooseFile: FC<ChooseFileProps> = ({
     children,
     onChange,
     loading,
     fileUrl,
     fileName,
+    handleUpload,
     error,
+    iconName,
 }) => {
     return (
-        <div className="flex flex-col w-full h-full p-1 overflow-auto">
-            <div className="flex justify-between overflow-clip">
+        <div className="flex flex-col w-full h-full p-1 overflow-auto mt-2">
+            <div className="flex justify-between overflow-clip mt-2">
                 <div className="space-y-2">
                     <label
                         htmlFor="avatar"
@@ -47,6 +73,22 @@ const ChooseFile: FC<ChooseFileProps> = ({
                 </div>
 
                 {loading && <Spinner />}
+
+                {iconName && (
+                    <div className="flex flex-col items-center">
+                        <div onClick={() => handleUpload(file)}>
+                            Or pick this
+                        </div>
+
+                        <IdenticonImg
+                            username={iconName ?? "helllo there"}
+                            saturation={50}
+                            lightness={50}
+                            width={150}
+                            height={150}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Success alert */}
