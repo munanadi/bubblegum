@@ -8,12 +8,15 @@ import { Form, useZodForm } from "@/components/Form";
 import { ChangeEvent, useEffect, useState } from "react";
 import ChooseFile from "@/components/ChooseFile";
 import { useShadowDrive } from "@/hooks/useShadowDrive";
+import useDebounce from "@/hooks/useDebounce";
 
 const Create = () => {
     const [fileUrl, setFileUrl] = useState<string>();
     const [fileName, setFileName] = useState<string>();
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<boolean>(false);
+    const [name, setName] = useState<string>("");
+    const debouncedName: string = useDebounce<string>(name, 1000);
 
     const userPDA = useAppState(state => state.userPDA);
     const setUserPDA = useAppState(state => state.setUserPDA);
@@ -71,6 +74,7 @@ const Create = () => {
 
         // Check if userPDA exists, Create one if not
         const userPDA = await getOrCreateUser(wallet.publicKey);
+        setUserPDA(userPDA);
         // Upload the metadata file
         const data = {
             name,
@@ -268,6 +272,7 @@ const Create = () => {
                     error={error}
                     fileName={fileName}
                     fileUrl={fileUrl}
+                    iconName={debouncedName}
                 />
 
                 <button
