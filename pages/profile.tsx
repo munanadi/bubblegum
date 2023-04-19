@@ -1,3 +1,5 @@
+import Photograph from "@/components/Icons/Photograph";
+import Spinner from "@/components/Spinner";
 import { useShadowDrive } from "@/hooks/useShadowDrive";
 import { useAppState } from "@/store/AppState";
 import { FC, ReactNode, useRef, useState } from "react";
@@ -116,15 +118,19 @@ const Profile: FC<{ children: ReactNode }> = ({ children }) => {
 
     function handleDrop(event: any) {
         event.preventDefault();
-        const files = event.dataTransfer.files;
+        let files;
+        if (event.dataTransfer) {
+            files = event.dataTransfer.files;
+        }
+        files = event.target.files;
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            setUploadedFiles([...uploadedFiles, file]);
+            setUploadedFiles(uploadedFiles => [...uploadedFiles, file]);
             if (file.type.includes("image")) {
                 const reader = new FileReader();
                 reader.onload = function () {
-                    setImages([...images, reader.result?.toString()]);
+                    setImages(images => [...images, reader.result?.toString()]);
                 };
                 reader.readAsDataURL(file);
             }
@@ -163,13 +169,92 @@ const Profile: FC<{ children: ReactNode }> = ({ children }) => {
                             />
                             <div className="flex flex-wrap">
                                 {images.map((image, index) => (
-                                    <div key={index}>
+                                    <div
+                                        key={index}
+                                        className="relative self-start"
+                                    >
+                                        <div
+                                            className="absolute left-1 top-1 cursor-pointer m-0.5 p-0.5 
+                                                border-1 rounded-md bg-black text-sm text-white opacity-50"
+                                            onClick={e => {
+                                                e.stopPropagation();
+
+                                                console.log(
+                                                    "This should delete the file or stop uploading"
+                                                );
+                                            }}
+                                        >
+                                            X
+                                        </div>
                                         <img
                                             src={image}
-                                            className="max-w-full h-auto mb-4 mr-4"
+                                            className="max-w-sm h-auto m-1 border-black border-2"
                                         />
+                                        {/* Success - Check for the uploaded URL and show this */}
+                                        <span className="inline-flex items-center justify-center rounded-full bg-emerald-100 px-2.5 py-0.5 text-emerald-700 absolute bottom-1 left-1 opacity-70">
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke-width="1.5"
+                                                stroke="currentColor"
+                                                className="-ms-1 me-1.5 h-4 w-4"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                />
+                                            </svg>
+
+                                            <p className="whitespace-nowrap text-sm">
+                                                Uploaded
+                                            </p>
+                                        </span>
+
+                                        {/* Loading - Show spinner when media is uploaded */}
+                                        <span className="inline-flex items-center justify-center rounded-full bg-amber-100 px-2.5 py-0.5 text-amber-700 absolute bottom-1 left-1 opacity-70">
+                                            <Spinner className="bg-amber-100 text-amber-600" />
+
+                                            <p className="whitespace-nowrap text-sm">
+                                                Loading
+                                            </p>
+                                        </span>
+
+                                        {/* Error - Shown when upload fails for some reason */}
+                                        <span className="inline-flex items-center justify-center rounded-full bg-red-100 px-2.5 py-0.5 text-red-700 absolute bottom-1 left-1 opacity-70">
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke-width="1.5"
+                                                stroke="currentColor"
+                                                className="-ms-1 me-1.5 h-4 w-4"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+                                                />
+                                            </svg>
+
+                                            <p className="whitespace-nowrap text-sm">
+                                                Failed
+                                            </p>
+                                        </span>
                                     </div>
                                 ))}
+                            </div>
+                            <div className="mt-10">
+                                <label>
+                                    <Photograph className="w-6 cursor-pointer" />
+                                    <input
+                                        className="hidden"
+                                        type="file"
+                                        multiple
+                                        onInputCapture={handleDrop}
+                                    />
+                                </label>
                             </div>
                         </div>
 
