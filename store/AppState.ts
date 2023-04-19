@@ -16,10 +16,10 @@ interface AppState {
     setGumSdk: (sdk: SDK) => void;
     // userPDA
     userPDA: PublicKey | undefined;
-    setUserPDA: (userPDA: PublicKey) => void;
+    setUserPDA: (userPDA: PublicKey | undefined) => void;
     // profilePDA
     profilePDA: PublicKey | undefined;
-    setProfilePDA: (profilePDA: PublicKey) => void;
+    setProfilePDA: (profilePDA: PublicKey | undefined) => void;
     // tx Sig
     txHash: string | undefined;
     setTxHash: (txHash: string) => void;

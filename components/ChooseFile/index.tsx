@@ -26,7 +26,7 @@ const ChooseFile: FC<ChooseFileProps> = ({
                         htmlFor="avatar"
                         className="block text-sm font-medium text-neutral-600"
                     >
-                        Upload your avatar
+                        Upload your avatar (dp.*)
                     </label>
 
                     <input

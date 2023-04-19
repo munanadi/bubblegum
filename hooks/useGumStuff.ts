@@ -7,6 +7,7 @@ import { useAppState } from "@/store/AppState";
 import { useEffect } from "react";
 import {
     AnchorWallet,
+    useAnchorWallet,
     useConnection,
     useWallet,
 } from "@solana/wallet-adapter-react";
@@ -45,7 +46,7 @@ export const useGumStuff = (): GumStuff => {
     const setConnection = useAppState(state => state.setConnection);
     const setGumSdk = useAppState(state => state.setGumSdk);
 
-    const anchorWallet = wallet.wallet as any as AnchorWallet;
+    const anchorWallet = useAnchorWallet() as AnchorWallet;
 
     const gqlClient = new GraphQLClient(GUM_MAINNET_GRAPHQL);
     const cluster = MAINNET_CLUSTER;
@@ -162,8 +163,6 @@ export const useGumStuff = (): GumStuff => {
         return profilePDA;
     };
 
-    // TODO: does not work. this.wallet.signTransaction is not a function
-    // Check with SDK?
     const deleteProfile = async (
         profileAccount: PublicKey,
         userAccount: PublicKey,
@@ -171,32 +170,22 @@ export const useGumStuff = (): GumStuff => {
     ): Promise<string | undefined> => {
         if (!sdk) return;
 
-        const { program } = sdk;
+        const res = await sdk.profile
+            .delete(profileAccount, userAccount, owner)
+            .rpc();
 
-        const ixBuilder = sdk.profile.delete(
-            profileAccount,
-            userAccount,
-            owner
-        );
-        console.log({ ixBuilder });
-        console.log(await ixBuilder.transaction());
+        setProfilePDA(undefined);
 
-        return await ixBuilder.rpc();
+        return res;
     };
 
-    // TODO: does not work. this.wallet.signTransaction is not a function
-    // Check with SDK
     const deleteUser = async (userAccount: PublicKey, owner: PublicKey) => {
         if (!sdk) return;
 
-        const { program } = sdk;
-        return await program.methods
-            .deleteUser()
-            .accounts({
-                user: userAccount,
-                authority: owner,
-            })
-            .rpc();
+        const res = await sdk.user.delete(userAccount, owner).rpc();
+
+        setUserPDA(undefined);
+        return res;
     };
 
     return {

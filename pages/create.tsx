@@ -172,7 +172,7 @@ const Create = () => {
                                 </span>
                             </div>
                             <button
-                                disabled
+                                disabled={!userPDA}
                                 className="inline-flex gap-2 rounded bg-green-100 p-1 text-red-600"
                                 onClick={() =>
                                     deleteUser(userPDA, wallet?.publicKey!)
@@ -209,7 +209,7 @@ const Create = () => {
                                 </span>
                             </div>
                             <button
-                                disabled
+                                disabled={!profilePDA}
                                 className="inline-flex gap-2 rounded bg-green-100 p-1 text-red-600"
                                 onClick={() =>
                                     deleteProfile(
