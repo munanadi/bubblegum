@@ -1,26 +1,117 @@
+import { useShadowDrive } from "@/hooks/useShadowDrive";
 import { useAppState } from "@/store/AppState";
 import { FC, ReactNode, useRef, useState } from "react";
 
 const Profile: FC<{ children: ReactNode }> = ({ children }) => {
     const wallet = useAppState(state => state.wallet);
+    const connection = useAppState(state => state.connection);
 
     const userPDA = useAppState(state => state.userPDA);
     const profilePDA = useAppState(state => state.profilePDA);
+    const sdk = useAppState(state => state.gumSdk);
+
+    const { drive, getOrCreateStorageAccountByName } = useShadowDrive(
+        wallet,
+        connection
+    );
 
     const publickey = wallet?.publicKey;
 
     const showInput = publickey && profilePDA && userPDA;
 
-    const handleBubble = (e: any) => {
+    const handleBubble = async (e: any) => {
         e.preventDefault();
-        console.log(text);
-        console.log(imagesName);
-        console.log(images);
+
+        let storageAccount;
+
+        storageAccount = await getOrCreateStorageAccountByName("gum_bucket");
+
+        if (
+            !drive ||
+            !storageAccount?.publicKey ||
+            !publickey ||
+            !sdk ||
+            !profilePDA ||
+            !userPDA
+        ) {
+            return;
+        }
+
+        let response;
+        // 1. Images need to be uploaded whatever is attached
+        for (const file of uploadedFiles) {
+            try {
+                response = await drive.uploadMultipleFiles(
+                    storageAccount.publicKey,
+                    uploadedFiles
+                );
+
+                for (const res of response) {
+                    uploadedFilesUrl.push(res.location);
+                }
+            } catch (e) {
+                console.log(e);
+                alert("Uploading files failed");
+                return;
+            } finally {
+                alert("Uploaded all files");
+                console.log(
+                    `Uploaded all files ${uploadedFilesUrl.toString()}`
+                );
+            }
+        }
+
+        const time = new Date().getTime().toString();
+        const identifier = publickey.toString() + "_" + time;
+        const fileName = publickey.toString() + "_" + time + ".txt";
+
+        // 2. The text along with its media should be uploaded in a file say unix timestamp_username
+        const media_data = uploadedFilesUrl.map(
+            (url, index) => `${index}_${identifier}_${url}`
+        );
+
+        const fileData = {
+            text_content: text,
+            media_data,
+        };
+
+        console.log(fileData);
+
+        // Check if profile PDA exists, Create one if not
+        // Construct the file to upload
+        let file = new File([JSON.stringify(fileData)], fileName, {
+            type: "plain/text",
+        });
+
+        const upload = await drive.uploadFile(storageAccount.publicKey, file);
+
+        let metadataUri = new URL(upload.finalized_locations[0]).toString();
+
+        console.log(metadataUri);
+
+        // Call the create post thing now.
+
+        const data = await sdk.post.create(
+            metadataUri,
+            profilePDA,
+            userPDA,
+            publickey
+        );
+
+        const postPDA = data.postPDA;
+        console.log(postPDA.toString(), " is the post PDA that was created");
+
+        const res = await data.instructionMethodBuilder.rpc();
+        console.log(res);
+
+        alert(res);
     };
 
     const [text, setText] = useState("");
     const [images, setImages] = useState<any[]>([]);
-    const [imagesName, setImagesNames] = useState<any[]>([]);
+    const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
+    const uploadedFilesUrl: string[] = [];
+
     const inputRef = useRef<any>(null);
 
     function handleDrop(event: any) {
@@ -29,8 +120,7 @@ const Profile: FC<{ children: ReactNode }> = ({ children }) => {
 
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
-            console.log(file);
-            setImagesNames([...imagesName, file.name]);
+            setUploadedFiles([...uploadedFiles, file]);
             if (file.type.includes("image")) {
                 const reader = new FileReader();
                 reader.onload = function () {
@@ -39,8 +129,6 @@ const Profile: FC<{ children: ReactNode }> = ({ children }) => {
                 reader.readAsDataURL(file);
             }
         }
-
-        console.log("Uploaded", images);
     }
 
     function handleTextChange(event: any) {
@@ -75,12 +163,12 @@ const Profile: FC<{ children: ReactNode }> = ({ children }) => {
                             />
                             <div className="flex flex-wrap">
                                 {images.map((image, index) => (
-                                    <img
-                                        src={image}
-                                        alt={`Uploaded file ${index}`}
-                                        key={index}
-                                        className="max-w-full h-auto mb-4 mr-4"
-                                    />
+                                    <div key={index}>
+                                        <img
+                                            src={image}
+                                            className="max-w-full h-auto mb-4 mr-4"
+                                        />
+                                    </div>
                                 ))}
                             </div>
                         </div>
