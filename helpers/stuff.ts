@@ -27,3 +27,7 @@ export const checkForShadowATA = async (
 
     return false;
 };
+
+export const getExplorerUrl = (type: "address" | "tx", data: string) => {
+    return `https://explorer.solana.com/${type}/${data}`;
+};
