@@ -3,6 +3,7 @@ import Spinner from "@/components/Spinner";
 import { useShadowDrive } from "@/hooks/useShadowDrive";
 import { useAppState } from "@/store/AppState";
 import { FC, ReactNode, useRef, useState } from "react";
+import { PostMetadata } from "@gumhq/sdk";
 
 const Profile: FC<{ children: ReactNode }> = ({ children }) => {
     const wallet = useAppState(state => state.wallet);
@@ -72,10 +73,14 @@ const Profile: FC<{ children: ReactNode }> = ({ children }) => {
             (url, index) => `${index}_${identifier}_${url}`
         );
 
-        const fileData = {
-            text_content: text,
-            media_data,
-        };
+        const fileData = new PostMetadata({
+            authorship: {
+                publicKey: publickey.toString(),
+                signature: "IDK",
+            },
+            content: { content: "", format: "markdown" },
+            type: "text",
+        });
 
         console.log(fileData);
 
