@@ -38,6 +38,12 @@ export const useShadowDrive = (
                 const drive = await new ShdwDrive(connection, wallet).init();
                 setDrive(drive);
             }
+
+            // TODO: Refactor needed. Get storage account too.
+            const stAcc = await getStorageAccountWithName("gum_bucket");
+            if (stAcc) {
+                setStorageAccount(stAcc);
+            }
         };
 
         if (wallet?.connected) {
@@ -111,10 +117,10 @@ export const useShadowDrive = (
         let fileUrl;
 
         const name = retrieveFileName.keys.find(name => {
-            name === fileName;
+            return name === fileName;
         });
 
-        fileUrl = fileUrl
+        fileUrl = name
             ? new URL(
                   `${SHADOW_DRIVE_ENDPOINT}${storageAccountPublickey}/${name}`
               ).toString()
