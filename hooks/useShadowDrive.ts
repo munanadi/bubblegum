@@ -49,11 +49,11 @@ export const useShadowDrive = (
         if (wallet?.connected) {
             initDrive();
         }
-    }, [wallet?.connected]);
+    }, [wallet?.connected, wallet?.connected, wallet?.publicKey]);
 
     useEffect(() => {
         getStorageAccounts(true);
-    }, [drive]);
+    }, [drive, wallet?.connected, wallet?.publicKey]);
 
     /**
      * Returns a list of storage accounts under the wallet or []
@@ -84,9 +84,9 @@ export const useShadowDrive = (
     const getStorageAccountWithName = async (storageAccountName: string) => {
         const accounts = await getStorageAccounts(true);
 
-        const storageAccount = accounts.filter(
-            acc => acc.account.identifier === storageAccountName
-        );
+        const storageAccount = accounts.filter(acc => {
+            return acc.account.identifier === storageAccountName;
+        });
 
         if (storageAccount) {
             setStorageAccount(storageAccount[0]);
