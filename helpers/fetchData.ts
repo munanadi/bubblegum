@@ -5,6 +5,10 @@ import { Namespace } from "@gumhq/sdk";
 
 const gqlClient = new GraphQLClient(GUM_MAINNET_GRAPHQL);
 
+/**
+ * TODO:
+ * Indexer is out of sync, manually fetching accounts now
+ */
 export async function getUser(owner: PublicKey): Promise<PublicKey | null> {
     const query = gql`
         query GetUser($owner: String!) {
@@ -31,6 +35,10 @@ export async function getUser(owner: PublicKey): Promise<PublicKey | null> {
     return null;
 }
 
+/**
+ * TODO:
+ * Indexer is out of sync, manually fetching accounts now
+ */
 export async function getProfile(
     userAccount: PublicKey,
     namespace: Namespace

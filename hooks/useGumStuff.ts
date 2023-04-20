@@ -1,10 +1,11 @@
 import { SDK, useGum } from "@gumhq/react-sdk";
 import { Namespace } from "@gumhq/sdk";
 import { PublicKey } from "@solana/web3.js";
+// TODO: Fetchers were out of sync, need to build an indexer
 import { getProfile, getUser } from "@/helpers/fetchData";
 import randomBytes from "randombytes";
 import { useAppState } from "@/store/AppState";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
     AnchorWallet,
     useAnchorWallet,
@@ -31,6 +32,11 @@ export interface GumStuff {
         userAccont: PublicKey,
         owner: PublicKey
     ) => Promise<string | undefined>;
+    getUser: () => Promise<PublicKey | undefined>;
+    getProfile: (
+        userPDA: PublicKey,
+        namespace: Namespace
+    ) => Promise<PublicKey | undefined>;
 }
 
 export const useGumStuff = (): GumStuff => {
@@ -71,7 +77,7 @@ export const useGumStuff = (): GumStuff => {
         (async () => {
             let userPDA;
             if (wallet.publicKey) {
-                userPDA = await getUser(wallet.publicKey);
+                userPDA = await getUser();
                 if (userPDA) {
                     setUserPDA(userPDA);
                 }
@@ -85,6 +91,70 @@ export const useGumStuff = (): GumStuff => {
         })();
     }, [wallet.connected, sdk]);
 
+    const userAccounts = useMemo(async () => {
+        if (!sdk || !publicKey) {
+            return undefined;
+        }
+        const allAccounts = await sdk.program.account.user.all();
+        const accounts: any[] = [];
+        for (const acc of allAccounts) {
+            if (acc.account.authority.toString() === publicKey.toString()) {
+                accounts.push(acc);
+            }
+        }
+        return accounts;
+    }, [publicKey]);
+
+    /**
+     * Returns the first user accounts found
+     */
+    const getUser = async () => {
+        const accs = await userAccounts;
+
+        if (!accs) return null;
+
+        // console.log(accs[0].publicKey);
+        return accs[0].publicKey;
+    };
+
+    const profileAccounts = useMemo(async () => {
+        if (!sdk || !publicKey) {
+            return undefined;
+        }
+
+        const userPDA = await getUser();
+
+        const allAccounts = await sdk.program.account.profile.all();
+        const accounts: any[] = [];
+
+        for (const acc of allAccounts) {
+            if (acc.account.user.toString() === userPDA.toString()) {
+                accounts.push(acc);
+            }
+        }
+        return accounts;
+    }, [publicKey]);
+
+    /**
+     * Returns the first user accounts found
+     */
+    const getProfile = async (userPDA: PublicKey, namepsace: Namespace) => {
+        const accs = await profileAccounts;
+
+        if (!accs) return null;
+
+        for (const acc of accs) {
+            if (
+                Object.keys(acc.account.namespace)[0] ===
+                namepsace.toString().toLowerCase()
+            ) {
+                return acc.publicKey;
+            }
+        }
+
+        return null;
+    };
+
     /**
      * Function that takes a wallet address and returns its userPDA or creates one for it.
      */
@@ -95,7 +165,7 @@ export const useGumStuff = (): GumStuff => {
 
         let userPDA;
         try {
-            userPDA = await getUser(ownerPubkey);
+            userPDA = await getUser();
 
             if (!userPDA) {
                 const randomHash = randomBytes(32);
@@ -194,5 +264,7 @@ export const useGumStuff = (): GumStuff => {
         getOrCreateProfile,
         deleteProfile,
         deleteUser,
+        getUser,
+        getProfile,
     };
 };
